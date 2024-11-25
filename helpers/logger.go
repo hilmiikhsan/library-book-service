@@ -16,7 +16,7 @@ func SetupLogger() {
 		PrettyPrint: true,
 	})
 
-	logFile, err := os.OpenFile("./logs/library_author_service.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
+	logFile, err := os.OpenFile("./logs/library_book_service.log", os.O_CREATE|os.O_APPEND|os.O_RDWR, 0666)
 	if err != nil {
 		log.Fatalf("failed to open log file: %v", err)
 	}

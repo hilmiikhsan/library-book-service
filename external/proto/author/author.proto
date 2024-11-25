@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package author;
+
+option go_package = "./author";
+
+
+service AuthorService {
+  rpc GetDetailAuthor (AuthorRequest) returns (AuthorResponse);
+}
+
+message AuthorRequest {
+  string id = 1;
+}
+
+message AuthorResponse {
+  string message = 1;  
+  AuthorData data = 2;   
+}
+
+message AuthorData {
+  string id = 1;
+  string name = 2;
+}
