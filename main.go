@@ -1,23 +1,54 @@
 package main
 
 import (
+	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+
 	"github.com/hilmiikhsan/library-book-service/cmd"
 	"github.com/hilmiikhsan/library-book-service/helpers"
 )
 
 func main() {
-	// load config
+	// Setup configuration
 	helpers.SetupConfig()
 
-	// load log
+	// Setup logging
 	helpers.SetupLogger()
 
-	// load db
+	// Setup PostgreSQL connection
 	helpers.SetupPostgres()
 
-	// run grpc
-	go cmd.ServeGRPC()
+	// Setup Redis connection
+	helpers.SetupRedis()
 
-	// run http
-	cmd.ServeHTTP()
+	// WaitGroup to manage goroutines
+	var wg sync.WaitGroup
+
+	// Run gRPC server
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		cmd.ServeGRPC()
+	}()
+
+	// Run HTTP server
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		cmd.ServeHTTP()
+	}()
+
+	// Graceful shutdown
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+
+	<-signalChan
+	log.Println("Shutting down servers...")
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+	log.Println("All servers stopped. Exiting...")
 }

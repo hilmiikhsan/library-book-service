@@ -85,11 +85,13 @@ func dependencyInject() Dependency {
 	bookRepo := &bookRepository.BookRepository{
 		DB:     helpers.DB,
 		Logger: helpers.Logger,
+		Redis:  helpers.RedisClient,
 	}
 
 	bookStockRepo := &bookStockRepository.BookStockRepository{
 		DB:     helpers.DB,
 		Logger: helpers.Logger,
+		Redis:  helpers.RedisClient,
 	}
 
 	bookBorrowedRepo := &bookBorrowedRepository.BookBorrowedRepository{

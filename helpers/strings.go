@@ -19,3 +19,10 @@ func FormatNullableDate(t sql.NullTime, format string) string {
 	}
 	return ""
 }
+
+func SafeString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}

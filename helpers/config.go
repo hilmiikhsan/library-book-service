@@ -1,6 +1,10 @@
 package helpers
 
-import "github.com/joho/godotenv"
+import (
+	"strconv"
+
+	"github.com/joho/godotenv"
+)
 
 var Env = map[string]string{}
 
@@ -19,4 +23,13 @@ func GetEnv(key string, val string) string {
 		result = val
 	}
 	return result
+}
+
+func GetEnvInt(key string, defaultValue int) int {
+	valueStr := GetEnv(key, strconv.Itoa(defaultValue))
+	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return value
 }

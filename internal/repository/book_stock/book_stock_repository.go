@@ -3,8 +3,12 @@ package BookStock
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/hilmiikhsan/library-book-service/constants"
 	"github.com/hilmiikhsan/library-book-service/internal/models"
 	"github.com/jmoiron/sqlx"
@@ -14,6 +18,7 @@ import (
 type BookStockRepository struct {
 	DB     *sqlx.DB
 	Logger *logrus.Logger
+	Redis  *redis.Client
 }
 
 func (r *BookStockRepository) InsertNewBookStock(ctx context.Context, bookStock *models.BookStock) error {
@@ -31,9 +36,22 @@ func (r *BookStockRepository) InsertNewBookStock(ctx context.Context, bookStock 
 }
 
 func (r *BookStockRepository) FindBookStockByID(ctx context.Context, id string) (*models.BookStock, error) {
-	var res = new(models.BookStock)
+	var (
+		res      = new(models.BookStock)
+		cacheKey = fmt.Sprintf("book_stock:%s", id)
+	)
 
-	err := r.DB.GetContext(ctx, res, r.DB.Rebind(queryFindBookStockByID), id)
+	cachedData, err := r.Redis.Get(ctx, cacheKey).Result()
+	if err == nil {
+		err = json.Unmarshal([]byte(cachedData), res)
+		if err == nil {
+			r.Logger.Info("category::FindBookStockByID - Data retrieved from cache")
+			return res, nil
+		}
+		r.Logger.Warn("category::FindBookStockByID - Failed to unmarshal cache data: ", err)
+	}
+
+	err = r.DB.GetContext(ctx, res, r.DB.Rebind(queryFindBookStockByID), id)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			r.Logger.Error("repo::FindBookStockByID - BookStock doesnt exist")
@@ -44,16 +62,49 @@ func (r *BookStockRepository) FindBookStockByID(ctx context.Context, id string) 
 		return nil, err
 	}
 
+	dataToCache, err := json.Marshal(res)
+	if err != nil {
+		r.Logger.Warn("category::FindBookStockByID - Failed to marshal data for caching: ", err)
+	} else {
+		err = r.Redis.Set(ctx, cacheKey, dataToCache, 5*time.Minute).Err()
+		if err != nil {
+			r.Logger.Warn("category::FindBookStockByID - Failed to cache data: ", err)
+		}
+	}
+
 	return res, nil
 }
 
 func (r *BookStockRepository) FindAllBookStock(ctx context.Context, limit, offset int) ([]models.BookStock, error) {
-	var res = make([]models.BookStock, 0)
+	var (
+		res      = make([]models.BookStock, 0)
+		cacheKey = fmt.Sprintf("book_stock:limit:%d:offset:%d", limit, offset)
+	)
 
-	err := r.DB.SelectContext(ctx, &res, r.DB.Rebind(queryFindAllBookStock), limit, offset)
+	cachedData, err := r.Redis.Get(ctx, cacheKey).Result()
+	if err == nil {
+		err = json.Unmarshal([]byte(cachedData), &res)
+		if err == nil {
+			r.Logger.Info("category::FindAllBookStock - Data retrieved from cache")
+			return res, nil
+		}
+		r.Logger.Warn("category::FindAllBookStock - Failed to unmarshal cache data: ", err)
+	}
+
+	err = r.DB.SelectContext(ctx, &res, r.DB.Rebind(queryFindAllBookStock), limit, offset)
 	if err != nil {
 		r.Logger.Error("repo::FindAllBookStock - failed to find all book stock: ", err)
 		return nil, err
+	}
+
+	dataToCache, err := json.Marshal(res)
+	if err != nil {
+		r.Logger.Warn("category::FindAllBookStock - Failed to marshal data for caching: ", err)
+	} else {
+		err = r.Redis.Set(ctx, cacheKey, dataToCache, 5*time.Minute).Err()
+		if err != nil {
+			r.Logger.Warn("category::FindAllBookStock - Failed to cache data: ", err)
+		}
 	}
 
 	return res, nil

@@ -78,17 +78,17 @@ func (s *BookService) GetDetailBook(ctx context.Context, id string) (*dto.GetDet
 	authorData, err := s.External.GetDetailAuthor(ctx, bookData.AuthorID.String())
 	if err != nil {
 		if strings.Contains(err.Error(), constants.ErrAuthorNotFound) {
-			s.Logger.Error("service::CreateBook - author not found")
+			s.Logger.Error("service::GetDetailBook - author not found")
 			return &dto.GetDetailBookResponse{}, err
 		}
 
-		s.Logger.Error("service::CreateBook - failed to get detail author: ", err)
+		s.Logger.Error("service::GetDetailBook - failed to get detail author: ", err)
 		return &dto.GetDetailBookResponse{}, err
 	}
 
 	categoryData, err := s.External.GetDetailCategory(ctx, bookData.CategoryID.String())
 	if err != nil {
-		s.Logger.Error("service::CreateBook - failed to get detail category: ", err)
+		s.Logger.Error("service::GetDetailBook - failed to get detail category: ", err)
 		return &dto.GetDetailBookResponse{}, err
 	}
 
