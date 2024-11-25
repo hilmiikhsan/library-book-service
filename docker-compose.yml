@@ -4,7 +4,7 @@ services:
     image: postgres:latest
     container_name: local-postgres-library-book
     ports:
-      - "5434:5432" # Menggunakan port 5433 di host
+      - "5434:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -16,7 +16,20 @@ services:
     image: redis:latest
     container_name: local-redis-library-book
     ports:
-      - "6381:6379" # Redis menggunakan port 6380 di host
+      - "6381:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
       - ./redis_data:/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: library-book-service
+    ports:
+      - "9093:9093"
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
